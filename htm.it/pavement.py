@@ -257,6 +257,7 @@ def clean_rabbitmq():
 
   # List HTM-IT queues
   result = subprocess.check_output(["rabbitmqadmin",
+                                    "--host=rabbit",
                                     "--username=%s" % rabbitmq_user,
                                     "--password=%s" % rabbitmq_password,
                                     "list",
@@ -270,6 +271,7 @@ def clean_rabbitmq():
         queue["name"] == "notifications"):
 
       subprocess.check_call(["rabbitmqadmin",
+                             "--host=rabbit",
                              "--username=%s" % rabbitmq_user,
                              "--password=%s" % rabbitmq_password,
                              "delete",
@@ -279,6 +281,7 @@ def clean_rabbitmq():
 
   # List HTM-IT exchanges
   result = subprocess.check_output(["rabbitmqadmin",
+                                    "--host=rabbit",
                                     "--username=%s" % rabbitmq_user,
                                     "--password=%s" % rabbitmq_password,
                                     "list",
@@ -290,6 +293,7 @@ def clean_rabbitmq():
   for exchange in json.loads(result):
     if exchange["name"].startswith("htm.it."):
       subprocess.check_call(["rabbitmqadmin",
+                             "--host=rabbit",
                              "--username=%s" % rabbitmq_user,
                              "--password=%s" % rabbitmq_password,
                              "delete",
