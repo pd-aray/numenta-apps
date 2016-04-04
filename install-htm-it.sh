@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # ----------------------------------------------------------------------
 # Numenta Platform for Intelligent Computing (NuPIC)
 # Copyright (C) 2015, Numenta, Inc.  Unless you have purchased from
@@ -22,7 +22,7 @@
 
 set -o errexit
 
-function install {
+install() {
   pushd $1
   python setup.py develop --prefix=$2
   popd
