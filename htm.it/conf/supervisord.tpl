@@ -7,7 +7,7 @@
 ; variables can be expanded using this syntax: "%(ENV_HOME)s".
 
 [unix_http_server]
-file=%%(here)s/../htm-it-supervisor.sock   ; (the path to the socket file)
+file=/var/run/htm-it-supervisor.sock   ; (the path to the socket file)
 
 [inet_http_server]
 port=127.0.0.1:9001
