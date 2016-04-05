@@ -26,7 +26,7 @@ import signal
 import urllib2
 import base64
 import json
-import pprint
+from htmengine.runtime.metric_listener import Protocol, parsePlaintext
 
 
 # Globals
@@ -77,10 +77,38 @@ class MetricPoller:
 
         response = urllib2.urlopen(request)
         data = MetricPoller.reformat_graphite_response(response)
+        if len(data) > 0:
+            MetricPoller.publish_metrics(data)
 
-        LOGGER.info("Request (%s): %s" % (self.graphite_url, url))
-        LOGGER.info("Response: %s" % (response.read()))
-        LOGGER.info("Data: %s" % pprint.pformat(data))
+    @staticmethod
+    def publish_metrics(data):
+        if gProfiling:
+            start_time = time.time()
+
+        with MessageBusConnector() as messageBus:
+            message = json.dumps({"protocol": Protocol.PLAIN, "data": data})
+            try:
+                LOGGER.info("Publishing message: %s", message)
+                messageBus.publish(mqName=gQueueName, body=message, persistent=True)
+            except MessageQueueNotFound:
+                LOGGER.info("Creating message queue that doesn't exist: %s", gQueueName)
+                messageBus.createMessageQueue(mqName=gQueueName, durable=True)
+                LOGGER.info("Re-publishing message: %s", message)
+                messageBus.publish(mqName=gQueueName, body=message, persistent=True)
+
+            LOGGER.info("forwarded batchLen=%d", len(data))
+
+            if gProfiling and data:
+                now = time.time()
+                try:
+                    for sample in data:
+                        metric_name, _value, timestamp = parsePlaintext(sample)
+                        LOGGER.info(
+                            "{TAG:CUSLSR.FW.DONE} metricName=%s; timestamp=%s; duration=%.4fs",
+                            metric_name, timestamp.isoformat() + "Z", now - start_time)
+                except Exception:
+                    LOGGER.exception("Profiling failed for sample=%r in data=[%r..%r]",
+                                     sample, data[0], data[-1])
 
     @staticmethod
     def reformat_graphite_response(graphite_response):
