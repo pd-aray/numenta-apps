@@ -56,6 +56,13 @@ poll_interval = 60
 # ERROR state if it continues to encounter errors
 metric_error_grace_period = 10800
 
+[metric_poller]
+graphite_url = https://graphite-dfw.pardot.com
+graphite_username =
+graphite_password =
+poll_frequency = 5
+queue_name = htm.it.metric.custom.data
+
 [metric_listener]
 # Port to listen on for plaintext protocol messages
 plaintext_port = 2003
