@@ -25,6 +25,8 @@ from nta.utils.message_bus_connector import MessageQueueNotFound
 import signal
 import urllib2
 import base64
+import json
+import pprint
 
 
 # Globals
@@ -74,9 +76,25 @@ class MetricPoller:
         request.add_header('Authorization', 'Basic %s' % graphite_creds)
 
         response = urllib2.urlopen(request)
+        data = MetricPoller.reformat_graphite_response(response)
 
         LOGGER.info("Request (%s): %s" % (self.graphite_url, url))
         LOGGER.info("Response: %s" % (response.read()))
+        LOGGER.info("Data: %s" % pprint.pformat(data))
+
+    @staticmethod
+    def reformat_graphite_response(graphite_response):
+        response = json.load(graphite_response)[0]
+        key = response["target"]
+        datapoints = response["datapoints"]
+
+        data = []
+        for datapoint in datapoints:
+            value = datapoint[0]
+            timestamp = datapoint[1]
+            if value is not None:
+                data.append("%s %s %s" % (key, value, timestamp))
+        return data
 
 
 @raiseExceptionOnMissingRequiredApplicationConfigPath
