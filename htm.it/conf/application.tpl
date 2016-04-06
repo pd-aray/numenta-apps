@@ -61,7 +61,7 @@ graphite_url = https://graphite-dfw.pardot.com
 graphite_username =
 graphite_password =
 graphite_keys =
-poll_frequency = 5
+poll_frequency = 15
 queue_name = htm.it.metric.custom.data
 
 [metric_listener]
