@@ -114,10 +114,7 @@ class MetricPoller:
 
 
 @raiseExceptionOnMissingRequiredApplicationConfigPath
-def run_metric_poller(graphite_url=None,
-                      graphite_username=None,
-                      graphite_password=None,
-                      poll_frequency=None):
+def run_metric_poller():
     global gQueueName
     global gProfiling
 
@@ -125,12 +122,12 @@ def run_metric_poller(graphite_url=None,
     config = Config("application.conf", os.environ["APPLICATION_CONFIG_PATH"])
     gQueueName = config.get("metric_poller", "queue_name")
     gProfiling = (config.getboolean("debugging", "profiling") or LOGGER.isEnabledFor(logging.DEBUG))
-    graphite_url = graphite_url or config.get("metric_poller", "graphite_url")
-    graphite_username = graphite_username or config.get("metric_poller", "graphite_username")
-    graphite_password = graphite_password or config.get("metric_poller", "graphite_password")
-    poll_frequency = poll_frequency or config.getfloat("metric_poller", "poll_frequency")
     LOGGER.info("run_metric_poller(graphite_url=%s, graphite_username=%s, graphite_password=*****, poll_frequency=%s)" %
                 (graphite_url, graphite_username, poll_frequency))
+    graphite_url = config.get("metric_poller", "graphite_url")
+    graphite_username = config.get("metric_poller", "graphite_username")
+    graphite_password = config.get("metric_poller", "graphite_password")
+    poll_frequency = config.getfloat("metric_poller", "poll_frequency")
 
     # Begin polling
     metric_poller = MetricPoller(graphite_url,
