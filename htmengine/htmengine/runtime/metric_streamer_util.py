@@ -295,6 +295,9 @@ class MetricStreamer(object):
      datasource,
      metricStatus) = storeDataWithRetries()
 
+    self._log.info("_streamMetricData(): metric-id=%s, num-model-rows=%d, ds=%s, metric-status=%d" %
+                   (metricID, len(modelInputRows), datasource, metricStatus))
+
     if modelInputRows is None:
       # Metric was in state not suitable for streaming
       return
@@ -307,11 +310,11 @@ class MetricStreamer(object):
 
     if metricStatus == MetricStatus.UNMONITORED:
       # Metric was not monitored during storage, so we're done
-      #self._log.info("Status of metric=%s is UNMONITORED; not forwarding "
-      #               "%d rows: rowids[%s..%s]; data=[%s..%s]",
-      #               metricID, len(modelInputRows),
-      #               modelInputRows[0].rowID, modelInputRows[-1].rowID,
-      #               modelInputRows[0].data, modelInputRows[-1].data)
+      self._log.info("Status of metric=%s is UNMONITORED; not forwarding "
+                    "%d rows: rowids[%s..%s]; data=[%s..%s]",
+                    metricID, len(modelInputRows),
+                    modelInputRows[0].rowID, modelInputRows[-1].rowID,
+                    modelInputRows[0].data, modelInputRows[-1].data)
       return
 
     lastDataRowID = modelInputRows[-1].rowID
