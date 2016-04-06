@@ -363,6 +363,10 @@ class Config(ConfigParser, object):
 
     return os.environ.get(envVarName)
 
+  def getlist(self, section, option):
+    values = self.get(section, option)
+    return [v.strip() for v in values.split(',\n') if v is not None and v[0] is not '#']
+
 
   @staticmethod
   def _combineEnvVarOverrideParts(envVarNamespace, section, option):
