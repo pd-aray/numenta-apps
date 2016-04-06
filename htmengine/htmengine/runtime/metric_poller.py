@@ -1,32 +1,20 @@
 #!/usr/bin/env python
 
 import datetime
-import errno
-import itertools
-import json
 import logging
-import optparse
 import os
-import socket
-import SocketServer
-import threading
 import time
-
-from nta.utils.config import Config
-from nta.utils.logging_support_raw import LoggingSupport
-from nta.utils import threading_utils
-
-from htmengine import raiseExceptionOnMissingRequiredApplicationConfigPath
-from htmengine.htmengine_logging import getExtendedLogger
-from htmengine.model_swapper.model_swapper_interface import (
-    MessageBusConnector)
-from nta.utils.message_bus_connector import MessageQueueNotFound
-
 import signal
 import urllib2
 import base64
 import json
+from htmengine import raiseExceptionOnMissingRequiredApplicationConfigPath
+from htmengine.htmengine_logging import getExtendedLogger
+from htmengine.model_swapper.model_swapper_interface import (MessageBusConnector)
 from htmengine.runtime.metric_listener import Protocol, parsePlaintext
+from nta.utils.config import Config
+from nta.utils.logging_support_raw import LoggingSupport
+from nta.utils.message_bus_connector import MessageQueueNotFound
 
 
 # Globals
