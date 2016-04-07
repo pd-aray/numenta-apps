@@ -57,10 +57,12 @@ poll_interval = 60
 metric_error_grace_period = 10800
 
 [metric_poller]
+enabled = false
 graphite_url = https://graphite-dfw.pardot.com
 graphite_username =
 graphite_password =
-poll_frequency = 5
+graphite_keys =
+poll_frequency = 15
 queue_name = htm.it.metric.custom.data
 
 [metric_listener]
