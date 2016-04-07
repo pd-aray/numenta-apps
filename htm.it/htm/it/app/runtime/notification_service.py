@@ -45,6 +45,7 @@ from htm.it.app import repository
 from htm.it.app.aws import ses_utils
 from htmengine.runtime.anomaly_service import AnomalyService
 
+from socket import socket, AF_INET, SOCK_DGRAM
 
 
 # How many days until we remove a notification device
@@ -165,6 +166,16 @@ class NotificationService(object):
     self._modelResultsExchange = (
       htm.it.app.config.get("metric_streamer", "results_exchange_name"))
 
+    # Report anomaly score back to statsd if configured
+    self.statsdAddress = htm.it.app.config.get("notifications", "statsd_address")
+    self.statsdPort = int(htm.it.app.config.get("notifications", "statsd_port"))
+    if self.statsdAddress is not None and self.statsdPort is not None:
+      self.statsdSocket = socket(AF_INET, SOCK_DGRAM)
+
+  def sendToGraphite(self, metric, anomalyScore):
+    if self.statsdSocket is not None:
+      anomalyMetric = "anomaly_score.%s:%f|g" % (metric, anomalyScore)
+      self.statsdSocket.sendto(anomalyMetric, (self.statsdAddress, self.statsdPort))
 
   def sendNotificationEmail(self, engine, settingObj, notificationObj):
     """ Send notification email through Amazon SES
@@ -295,6 +306,11 @@ class NotificationService(object):
 
 
       for row in batch["results"]:
+
+        statName = resource
+        anomalyScore = row["anomaly"]
+
+        self.sendToGraphite(statName, anomalyScore)
 
         if row["anomaly"] >= minThreshold:
           rowDatetime = datetime.utcfromtimestamp(row["ts"])
