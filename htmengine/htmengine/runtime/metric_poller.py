@@ -133,21 +133,23 @@ def run_metric_poller():
     config = Config("application.conf", os.environ["APPLICATION_CONFIG_PATH"])
     gQueueName = config.get("metric_poller", "queue_name")
     gProfiling = (config.getboolean("debugging", "profiling") or LOGGER.isEnabledFor(logging.DEBUG))
+    enabled = config.getboolean("metric_poller", "enabled")
     graphite_url = config.get("metric_poller", "graphite_url")
     graphite_username = config.get("metric_poller", "graphite_username")
     graphite_password = config.get("metric_poller", "graphite_password")
     graphite_keys = config.getlist("metric_poller", "graphite_keys")
     poll_frequency = config.getfloat("metric_poller", "poll_frequency")
-    LOGGER.info("run_metric_poller(graphite_url=%s, graphite_username=%s, graphite_password=*****, graphite_keys=%s, poll_frequency=%s)" %
-                (graphite_url, graphite_username, graphite_keys, poll_frequency))
+    LOGGER.info("run_metric_poller(enabled=%r, graphite_url=%s, graphite_username=%s, graphite_password=*****, graphite_keys=%s, poll_frequency=%s)" %
+                (enabled, graphite_url, graphite_username, graphite_keys, poll_frequency))
 
     # Begin polling
-    metric_poller = MetricPoller(graphite_url,
-                                 graphite_username,
-                                 graphite_password,
-                                 graphite_keys,
-                                 poll_frequency)
-    metric_poller.poll()
+    if enabled:
+        metric_poller = MetricPoller(graphite_url,
+                                     graphite_username,
+                                     graphite_password,
+                                     graphite_keys,
+                                     poll_frequency)
+        metric_poller.poll()
 
 
 if __name__ == "__main__":
