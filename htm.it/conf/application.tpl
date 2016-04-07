@@ -58,7 +58,7 @@ metric_error_grace_period = 10800
 
 [metric_poller]
 enabled = false
-graphite_url = https://graphite-dfw.pardot.com
+graphite_url =
 graphite_username =
 graphite_password =
 graphite_keys =
@@ -80,6 +80,8 @@ body_default = notification-body-default.tpl
 body_custom = notification-body-custom.tpl
 aws_access_key_id = %(NOTIFICATIONS_AWS_ACCESS_KEY_ID)s
 aws_secret_access_key = %(NOTIFICATIONS_AWS_SECRET_ACCESS_KEY)s
+statsd_address =
+statsd_port =
 
 [registration]
 subject = Welcome to HTM-IT!
