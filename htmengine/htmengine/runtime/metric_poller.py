@@ -28,10 +28,16 @@ class MetricPoller:
     graphite_url = None
     graphite_username = None
     graphite_password = None
+    graphite_keys = None
     poll_frequency = None
     timestamp_format = "%Y%m%d_%H:%M:%S"
 
-    def __init__(self, graphite_url, graphite_username, graphite_password, poll_frequency):
+    def __init__(self,
+                 graphite_url,
+                 graphite_username,
+                 graphite_password,
+                 graphite_keys,
+                 poll_frequency):
         signal.signal(signal.SIGINT, self.exit)
         signal.signal(signal.SIGTERM, self.exit)
 
@@ -39,6 +45,7 @@ class MetricPoller:
         self.graphite_url = graphite_url
         self.graphite_username = graphite_username
         self.graphite_password = graphite_password
+        self.graphite_keys = graphite_keys
         self.poll_frequency = poll_frequency
 
     def exit(self, signum, frame):
@@ -50,23 +57,23 @@ class MetricPoller:
             self.request_graphite_metrics()
 
     def request_graphite_metrics(self):
-        graphite_creds = base64.encodestring('%s:%s' % (self.graphite_username, self.graphite_password))[:-1]
-        graphite_from = '-%ds' % int(self.poll_frequency)
-        graphite_to = datetime.datetime.now().strftime(self.timestamp_format)
-        graphite_key = "stats.timers.automation.time_in_queue.sf-dallas-primary.all.percentile.95"
+        for graphite_key in self.graphite_keys:
+            graphite_creds = base64.encodestring('%s:%s' % (self.graphite_username, self.graphite_password))[:-1]
+            graphite_from = '-%ds' % int(self.poll_frequency)
+            graphite_to = datetime.datetime.now().strftime(self.timestamp_format)
 
-        url = "%s/render/?format=json&from=%s&to=%s&target=%s" % (self.graphite_url,
-                                                                  graphite_from,
-                                                                  graphite_to,
-                                                                  graphite_key)
+            url = "%s/render/?format=json&from=%s&to=%s&target=%s" % (self.graphite_url,
+                                                                      graphite_from,
+                                                                      graphite_to,
+                                                                      graphite_key)
 
-        request = urllib2.Request(url)
-        request.add_header('Authorization', 'Basic %s' % graphite_creds)
+            request = urllib2.Request(url)
+            request.add_header('Authorization', 'Basic %s' % graphite_creds)
 
-        response = urllib2.urlopen(request)
-        data = MetricPoller.reformat_graphite_response(response)
-        if len(data) > 0:
-            MetricPoller.publish_metrics(data)
+            response = urllib2.urlopen(request)
+            data = MetricPoller.reformat_graphite_response(response)
+            if len(data) > 0:
+                MetricPoller.publish_metrics(data)
 
     @staticmethod
     def publish_metrics(data):
@@ -100,7 +107,11 @@ class MetricPoller:
 
     @staticmethod
     def reformat_graphite_response(graphite_response):
-        response = json.load(graphite_response)[0]
+        response = json.load(graphite_response)
+        if not response:
+            return []
+
+        response = response[0]
         key = response["target"]
         datapoints = response["datapoints"]
 
@@ -134,6 +145,7 @@ def run_metric_poller():
     metric_poller = MetricPoller(graphite_url,
                                  graphite_username,
                                  graphite_password,
+                                 graphite_keys,
                                  poll_frequency)
     metric_poller.poll()
 
