@@ -8,6 +8,7 @@ import signal
 import urllib2
 import base64
 import json
+import sys
 from htmengine import raiseExceptionOnMissingRequiredApplicationConfigPath
 from htmengine.htmengine_logging import getExtendedLogger
 from htmengine.model_swapper.model_swapper_interface import (MessageBusConnector)
@@ -19,6 +20,7 @@ from nta.utils.message_bus_connector import MessageQueueNotFound
 
 # Globals
 LOGGER = getExtendedLogger(__name__)
+CURRENT_MODULE = sys.modules[__name__]
 gQueueName = None
 gProfiling = False
 
@@ -54,7 +56,9 @@ class MetricPoller:
     def poll(self):
         while not self.stop:
             time.sleep(self.poll_frequency)
-            self.request_graphite_metrics()
+            response = self.request_graphite_metrics()
+            response = CURRENT_MODULE.reformat_graphite_reponse(response)
+            CURRENT_MODULE.publish_metrics(response)
 
     def request_graphite_metrics(self):
         for graphite_key in self.graphite_keys:
@@ -67,61 +71,70 @@ class MetricPoller:
                                                                       graphite_to,
                                                                       graphite_key)
 
+            LOGGER.info("Requesting Graphite data from %s" % url)
             request = urllib2.Request(url)
             request.add_header('Authorization', 'Basic %s' % graphite_creds)
 
             response = urllib2.urlopen(request)
-            data = MetricPoller.reformat_graphite_response(response)
-            if len(data) > 0:
-                MetricPoller.publish_metrics(data)
+            LOGGER.info("Received response: %r" % response)
 
-    @staticmethod
-    def publish_metrics(data):
-        if gProfiling:
-            start_time = time.time()
+            response = json.load(response)
+            if response:
+                response = response[0]
+            return response
 
-        with MessageBusConnector() as messageBus:
-            message = json.dumps({"protocol": Protocol.PLAIN, "data": data})
-            try:
-                LOGGER.info("Publishing message: %s", message)
-                messageBus.publish(mqName=gQueueName, body=message, persistent=True)
-            except MessageQueueNotFound:
-                LOGGER.info("Creating message queue that doesn't exist: %s", gQueueName)
-                messageBus.createMessageQueue(mqName=gQueueName, durable=True)
-                LOGGER.info("Re-publishing message: %s", message)
-                messageBus.publish(mqName=gQueueName, body=message, persistent=True)
 
-            LOGGER.info("forwarded batchLen=%d", len(data))
-
-            if gProfiling and data:
-                now = time.time()
-                try:
-                    for sample in data:
-                        metric_name, _value, timestamp = parsePlaintext(sample)
-                        LOGGER.info(
-                            "{TAG:CUSLSR.FW.DONE} metricName=%s; timestamp=%s; duration=%.4fs",
-                            metric_name, timestamp.isoformat() + "Z", now - start_time)
-                except Exception:
-                    LOGGER.exception("Profiling failed for sample=%r in data=[%r..%r]",
-                                     sample, data[0], data[-1])
-
-    @staticmethod
-    def reformat_graphite_response(graphite_response):
-        response = json.load(graphite_response)
-        if not response:
-            return []
-
-        response = response[0]
-        key = response["target"]
-        datapoints = response["datapoints"]
-
-        data = []
-        for datapoint in datapoints:
-            value = datapoint[0]
-            timestamp = datapoint[1]
-            if value is not None:
-                data.append("%s %s %s" % (key, value, timestamp))
+def reformat_graphite_response(response):
+    data = []
+    if not response:
         return data
+
+    print "Loaded JSON response: %r" % response
+    key = response["target"]
+    datapoints = response["datapoints"]
+
+    for datapoint in datapoints:
+        value = datapoint[0]
+        timestamp = datapoint[1]
+        if value is not None:
+            data.append("%s %s %s" % (key, value, timestamp))
+    return data
+
+
+def publish_metrics(data):
+    if not data:
+        return False
+
+    LOGGER.info("Parsed data: %r" % data)
+
+    if gProfiling:
+        start_time = time.time()
+
+    with MessageBusConnector() as messageBus:
+        message = json.dumps({"protocol": Protocol.PLAIN, "data": data})
+        try:
+            LOGGER.info("Publishing message: %s", message)
+            messageBus.publish(mqName=gQueueName, body=message, persistent=True)
+        except MessageQueueNotFound:
+            LOGGER.info("Creating message queue that doesn't exist: %s", gQueueName)
+            messageBus.createMessageQueue(mqName=gQueueName, durable=True)
+            LOGGER.info("Re-publishing message: %s", message)
+            messageBus.publish(mqName=gQueueName, body=message, persistent=True)
+
+        LOGGER.info("forwarded batchLen=%d", len(data))
+
+        if gProfiling and data:
+            now = time.time()
+            try:
+                for sample in data:
+                    metric_name, _value, timestamp = parsePlaintext(sample)
+                    LOGGER.info(
+                        "{TAG:CUSLSR.FW.DONE} metricName=%s; timestamp=%s; duration=%.4fs",
+                        metric_name, timestamp.isoformat() + "Z", now - start_time)
+            except Exception:
+                LOGGER.exception("Profiling failed for sample=%r in data=[%r..%r]",
+                                 sample, data[0], data[-1])
+    return True
 
 
 @raiseExceptionOnMissingRequiredApplicationConfigPath
